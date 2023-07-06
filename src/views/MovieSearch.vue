@@ -31,13 +31,13 @@
                             <label class="label">Select Collection</label>
                             <div class="control">
                                 <div class="select">
-                                    <select v-model="selectedCollection">
-                                        <option disabled value="">Select Collection</option>
-                                        <option value="vhs">VHS</option>
-                                        <option value="blu-ray">Blu-ray</option>
+                                    <select v-model="selectedCollection[movie.id]">
+                                        <option value="" disabled selected>Select Collection</option>
                                         <option value="4k UHD">4K UHD</option>
-                                        <option value="laserdisc">Laserdisc</option>
+                                        <option value="blu-ray">Blu-ray</option>
                                         <option value="dvd">DVD</option>
+                                        <option value="laserdisc">Laserdisc</option>
+                                        <option value="vhs">VHS</option>
                                     </select>
                                 </div>
                             </div>
@@ -54,25 +54,31 @@
         <div class="modal" :class="{ 'is-active': isModalOpen }">
             <div class="modal-background" @click="closeModal"></div>
             <div class="modal-content">
-                <div class="box" v-if="selectedMovie">
-                <button
+            <div class="box" v-if="selectedMovie">
+                    <button
                     class="button is-success is-pulled-right"
                     @click="addToCollection(selectedMovie, selectedCollection)"
-                >
+                    >
                     Add to Collection
-                </button>
-                <article class="media">
+                    </button>
+                    <article class="media">
                     <div class="media-content">
                         <div class="content">
-                            <h2 class="title is-4">{{ selectedMovie.title }}</h2>
-                            <p>Year: {{ getYear(selectedMovie.release_date) }}</p>
-                            <p>Top Billed Cast: {{ getTopBilledCast(selectedMovie.credits) }}</p>
-                            <p>{{ selectedMovie.overview }}</p>
+                        <h2 class="title is-4">{{ selectedMovie.title }}</h2>
+                        <p>Year: {{ getYear(selectedMovie.release_date) }}</p>
+                        <p>Top Billed Cast: {{ getTopBilledCast(selectedMovie.credits) }}</p>
+                        <p>{{ selectedMovie.overview }}</p>
+                        </div>
+                        <div class="stills-slider" ref="stillsSlider">
+                            <div class="still-item" v-for="still in selectedMovie.stills" :key="still.id">
+                                <img :src="still.url" alt="Still" />
+                            </div>
                         </div>
                     </div>
-                </article>
+                    </article>
                 </div>
             </div>
+
             <button class="modal-close is-large" aria-label="close" @click="closeModal"></button>
         </div>
     </div>
@@ -80,15 +86,18 @@
 
 <script>
 import api from '../services/api';
+import Flickity from 'flickity';
+import 'flickity/dist/flickity.css';
 
 export default {
     data() {
         return {
             searchTerm: '',
             movies: [],
-            selectedCollection: '',
+            selectedCollection: {},
             isModalOpen: false,
             selectedMovie: null,
+            flickitySlider: null,
         };
     },
     watch: {
@@ -99,6 +108,14 @@ export default {
                     this.searchMovies();
                 } else {
                     this.movies = [];
+                }
+            },
+        },
+        selectedMovie: {
+            immediate: true,
+            handler() {
+                if (this.selectedMovie && this.selectedMovie.stills && this.selectedMovie.stills.length > 0) {
+                    this.initializeSlider();
                 }
             },
         },
@@ -137,6 +154,18 @@ export default {
             try {
                 const response = await api.get(`movie/${movie.id}/credits`);
                 this.selectedMovie.credits = response.data;
+
+                const stillsResponse = await api.get(`movie/${movie.id}/images`, {
+                    params: {
+                        include_all_sizes: true,
+                    },
+                });
+                this.selectedMovie.stills = stillsResponse.data.backdrops.map((backdrop) => ({
+                    id: backdrop.file_path,
+                    url: `https://image.tmdb.org/t/p/w500${backdrop.file_path}`,
+                }));
+
+                this.initializeSlider();
             } catch (error) {
                 console.error(error);
             }
@@ -159,6 +188,18 @@ export default {
         closeModal() {
             this.selectedMovie = null;
             this.isModalOpen = false;
+        },
+        initializeSlider() {
+            this.$nextTick(() => {
+                if (this.selectedMovie && this.selectedMovie.stills && this.selectedMovie.stills.length > 0) {
+                    if (this.flickitySlider) {
+                        this.flickitySlider.destroy();
+                    }
+                    this.flickitySlider = new Flickity(this.$refs.stillsSlider, {
+                        // Flickity options
+                    });
+                }
+            });
         },
     },
 };
