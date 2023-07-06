@@ -8,7 +8,7 @@
             <div v-for="movie in movies" :key="movie.id">
                 <img :src="'https://image.tmdb.org/t/p/w200' + movie.poster_path" alt="Movie Poster">
                 <h3>{{ movie.title }}</h3>
-                <select v-model="selectedCollection" @change="addToCollection(movie)">
+                <select v-model="selectedCollection">
                     <option disabled value="">Select Collection</option>
                     <option value="vhs">VHS</option>
                     <option value="blu-ray">Blu-ray</option>
@@ -16,6 +16,7 @@
                     <option value="laserdisc">Laserdisc</option>
                     <option value="dvd">DVD</option>
                 </select>
+                <button @click="addToCollection(movie, selectedCollection)">Add to Collection</button>
             </div>
         </div>
     </div>
@@ -57,11 +58,19 @@ export default {
                 console.error(error);
             }
         },
-        addToCollection(movie) {
-            this.$store.commit('addToCollection', {
-                movie,
-                collection: this.selectedCollection,
-            });
+        addToCollection(movie, collection) {
+            if (!collection) {
+                return;
+            }
+            const existingItem = this.$store.state.collections.find(
+                item => item.movie.id === movie.id && item.collection === collection
+            );
+            if (!existingItem) {
+                this.$store.commit('addToCollection', {
+                    movie,
+                    collection,
+                });
+            }
         },
     },
 };
