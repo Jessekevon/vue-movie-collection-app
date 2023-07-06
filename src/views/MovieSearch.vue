@@ -79,12 +79,8 @@
                 </p>
                 <p>{{ selectedMovie.overview }}</p>
               </div>
-              <div class="stills-slider" ref="stillsSlider">
-                <div
-                  class="still-item"
-                  v-for="still in selectedMovie.stills"
-                  :key="still.id"
-                >
+              <div class="stills-slider" v-flickity ref="stillsSlider">
+                <div class="still-item" v-for="still in selectedMovie.stills" :key="still.id">
                   <img :src="still.url" alt="Still" />
                 </div>
               </div>
@@ -115,8 +111,33 @@ export default {
       selectedCollection: {},
       isModalOpen: false,
       selectedMovie: null,
-      flickitySlider: null,
     };
+  },
+  directives: {
+    flickity: {
+      inserted(el) {
+        const flickitySlider = new Flickity(el, {
+          // Flickity options
+          cellAlign: "left",
+          contain: true,
+          wrapAround: true,
+        });
+
+        // Ensure Flickity recalculates its size when the modal is fully visible
+        const observer = new MutationObserver(() => {
+          flickitySlider.resize();
+        });
+        observer.observe(el, { attributes: true });
+
+        el.flickitySlider = flickitySlider;
+      },
+      unbind(el) {
+        if (el.flickitySlider) {
+          el.flickitySlider.destroy();
+          delete el.flickitySlider;
+        }
+      },
+    },
   },
   watch: {
     searchTerm: {
@@ -191,11 +212,16 @@ export default {
           })
         );
 
-        this.initializeSlider();
+        this.$nextTick(() => {
+          this.$nextTick(() => {
+            this.initializeSlider();
+          });
+        });
       } catch (error) {
         console.error(error);
       }
     },
+
     getYear(date) {
       if (date) {
         return new Date(date).getFullYear();
@@ -216,21 +242,36 @@ export default {
       this.isModalOpen = false;
     },
     initializeSlider() {
-      this.$nextTick(() => {
-        if (
-          this.selectedMovie &&
-          this.selectedMovie.stills &&
-          this.selectedMovie.stills.length > 0
-        ) {
+      if (this.selectedMovie && this.selectedMovie.stills && this.selectedMovie.stills.length > 0) {
+        this.$nextTick(() => {
           if (this.flickitySlider) {
             this.flickitySlider.destroy();
+            this.flickitySlider = null;
           }
-          this.flickitySlider = new Flickity(this.$refs.stillsSlider, {
-            // Flickity options
-          });
-        }
-      });
-    },
+          const stillsSlider = this.$refs.stillsSlider;
+          if (stillsSlider) {
+            stillsSlider.classList.add('flickity-enabled');
+            this.flickitySlider = new Flickity(stillsSlider, {
+              // Flickity options
+              cellAlign: 'left',
+              contain: true,
+              wrapAround: true
+            });
+          }
+        });
+      } else {
+        this.$nextTick(() => {
+          if (this.flickitySlider) {
+            this.flickitySlider.destroy();
+            this.flickitySlider = null;
+          }
+          const stillsSlider = this.$refs.stillsSlider;
+          if (stillsSlider) {
+            stillsSlider.classList.remove('flickity-enabled');
+          }
+        });
+      }
+    }
   },
 };
 </script>
