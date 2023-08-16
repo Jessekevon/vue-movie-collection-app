@@ -11,9 +11,9 @@
     "axios": "^1.4.0",
     "bulma": "^0.9.4",
     "core-js": "^3.8.3",
-    "flickity": "^3.0.0",
     "vue": "^3.2.36",
     "vue-router": "^4.2.3",
+    "vue-slick-carousel": "^1.0.6",
     "vuex": "^4.1.0"
   },
   "devDependencies": {
